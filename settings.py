@@ -11,71 +11,98 @@ TITLE = "My Awesome Game"
 FPS = 60
 
 
-# Make the game window
-pygame.init()
-screen = pygame.display.set_mode([WIDTH, HEIGHT])
-pygame.display.set_caption(TITLE)
-clock = pygame.time.Clock()
-
-
-# Limit allowed events
-pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.KEYUP])
-
-
 # Define colors
-SKY_BLUE = (0, 0, 255)
+SKY_BLUE = (135, 200, 235)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-
+BROWN = (93, 67, 62)
     
 # Fonts
-FONT_XL = pygame.font.Font('assets/fonts/Dinomouse-Regular.otf', 96)
-FONT_LG = pygame.font.Font(None, 64)
-FONT_MD = pygame.font.Font(None, 32)
-FONT_SM = pygame.font.Font(None, 24)
+PRIMARY_FONT = 'assets/fonts/Dinomouse-Regular.otf'
+SECONDARY_FONT = 'assets/fonts/Dinomouse-Regular.otf'
 
 
-# Load images
-grass_dirt_img = load_image('assets/images/tiles/grass_dirt.png')
-block_img = load_image('assets/images/tiles/block.png')
+# Images
+##''' background '''
+##BACKGROUND_IMG = 'assets/images/backgrounds/final_day.png'
+
+''' tiles '''
+GRASS_IMG = 'assets/images/tiles/grass_dirt.png'
+BLOCK_IMG = 'assets/images/tiles/block.png'
+
+''' hero '''
+HERO_IMGS_IDLE_RT = ['assets/images/characters/player_idle.png']
+HERO_IMGS_WALK_RT = ['assets/images/characters/player_walk1.png',
+                     'assets/images/characters/player_walk2.png']
+HERO_IMGS_JUMP_RT = ['assets/images/characters/player_jump.png']
+
+''' items '''
+GEM_IMG = 'assets/images/items/diamond.png'
+HEART_IMG = 'assets/images/items/heart.png'
+KEY_IMG = 'assets/images/items/key.png'
+
+''' doors '''
+DOORTOP_IMG = 'assets/images/tiles/door_top.png'
+DOOR_IMG = 'assets/images/tiles/door.png'
+LOCKED_DOORTOP_IMG = 'assets/images/tiles/locked_door_top.png'
+LOCKED_DOOR_IMG = 'assets/images/tiles/locked_door.png'
+
+'sign'
+SIGN_IMG = 'assets/images/tiles/sign.png'
+
+''' goals '''
+FLAG_IMG = 'assets/images/tiles/flag.png'
+FLAGPOLE_IMG = 'assets/images/tiles/flagpole.png'
+
+''' enemies '''
+SPIKEBALL_IMGS = ['assets/images/characters/spikeball1.png',
+                 'assets/images/characters/spikeball2.png']
+
+SPIKEMAN_IMGS = ['assets/images/characters/spikeman_walk1.png',
+                'assets/images/characters/spikeman_walk2.png']
+
+CLOUD_IMG = 'assets/images/characters/cloud.png'
 
 
-hero_imgs_idle_rt = [load_image('assets/images/characters/player_idle.png')]
-hero_imgs_walk_rt = [load_image('assets/images/characters/player_walk1.png'),
-                     load_image('assets/images/characters/player_walk2.png')]
-hero_imgs_jump_rt = [load_image('assets/images/characters/player_jump.png')]
+# Sounds
+JUMP_SND = 'assets/sounds/jump.wav'
+GEM_SND = 'assets/sounds/collect_point.wav'
+HURT_SND = 'assets/sounds/hurt.ogg'
+LEVEL_UP_SND = 'assets/sounds/level_up.wav'
+POWERUP_SND = 'assets/sounds/pickup_item.wav'
 
-hero_imgs_idle_lt = [flip_image_x(img) for img in hero_imgs_idle_rt]
-hero_imgs_walk_lt = [flip_image_x(img) for img in hero_imgs_walk_rt]
-hero_imgs_jump_lt = [flip_image_x(img) for img in hero_imgs_jump_rt]
-
-
-flag_img = load_image('assets/images/tiles/flag.png')
-flagpole_img = load_image('assets/images/tiles/flagpole.png')
-gem_img = load_image('assets/images/items/gem.png')
-spikeball_imgs = [load_image('assets/images/characters/spikeBall1.png'),
-                 load_image('assets/images/characters/spikeBall2.png')]
-cloud_img = load_image('assets/images/characters/cloud.png')
-spikeman_imgs_rt = [load_image('assets/images/characters/spikeMan_walk1.png'),
-                    load_image('assets/images/characters/spikeMan_walk2.png')]
-spikeman_imgs_lt = [flip_image_x(img) for img in spikeman_imgs_rt]
-
-
-# Load sounds
-
-
-# Load music
+# Music
+TITLE_MUSIC = 'assets/music/calm_happy.ogg'
+PLAYING_MUSIC = 'assets/music/cooking_mania.wav'
 
 
 # Levels
-levels = ['assets/levels/world-1.json',
+LEVELS = ['assets/levels/world-1.json',
           'assets/levels/world-2.json',
           'assets/levels/world-3.json']
 
+# Controls
+CONTROLS = {'left': pygame.K_LEFT,
+            'right': pygame.K_RIGHT,
+            'jump': pygame.K_SPACE,
+            'interact': pygame.K_UP,
+            'uninteract': pygame.K_DOWN}
 
-# Other constants and settings
-START = 0
-PLAYING = 1
-PAUSED = 2
-WIN = 3
-LOSE = 4
+
+# Physics settings
+##GRAVITY = 1.0
+##TERMINAL_VELOCITY = 32
+
+
+# Other settings
+HERO_SPEED = 5
+HERO_JUMP_POWER = 22
+
+SPIKEBALL_SPEED = 2
+SPIKEMAN_SPEED = 2
+CLOUD_SPEED = 2
+
+# Scoring
+POINTS_PER_LEVEL = 100
+POINTS_PER_COIN = 10
+POINTS_PER_POWERUP = 25

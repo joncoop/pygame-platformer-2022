@@ -45,8 +45,7 @@ class Entity(pygame.sprite.Sprite):
             elif self.vx > 0:
                 self.rect.right = platform.rect.left
 
-        if hits:
-            self.reverse()
+        return len(hits) > 0
 
     def move_y(self):
         self.rect.y += self.vy
@@ -73,11 +72,10 @@ class Entity(pygame.sprite.Sprite):
             self.rect.right = self.game.world_width
             at_edge = True
 
-        if at_edge:
-            self.reverse()
-
         if self.rect.top > self.game.world_height:
             self.kill()
+
+        return at_edge
 
     def check_platform_edges(self):
         self.rect.y += 2
@@ -94,8 +92,7 @@ class Entity(pygame.sprite.Sprite):
                 if platform.rect.left <= self.rect.left:
                     at_edge = False
 
-        if at_edge:
-            self.reverse()
+        return at_edge
 
 
 class AnimatedEntity(Entity):
@@ -152,7 +149,7 @@ class Hero(AnimatedEntity):
         self.max_hearts = 5
         self.escape_time = 0
         self.keys = []
-        self.is_interacting = False
+        self.is_interacting = False # move this to game (only pause/freeze during sign interactions)
 
     def go_left(self):
         self.vx = -1 * self.speed
@@ -263,14 +260,15 @@ class SpikeBall(AnimatedEntity):
         self.vy = 0
 
     def update(self):
-        self.apply_gravity()
-        self.move_x()
-        self.check_platforms_x()
+        self.apply_gravity() #does this need to go first?
+        self.move_x() # does x movement need to happen before y?
+        hit_something = self.check_platforms_x()
         self.move_y()
         self.check_platforms_y()
-        self.check_world_edges()
+        at_world_edge = self.check_world_edges()
+        if hit_something or at_world_edge:
+            self.reverse()
         self.animate()
-
         
 class Cloud(Entity):
     
@@ -281,7 +279,9 @@ class Cloud(Entity):
 
     def update(self):
         self.move_x()
-        self.check_world_edges()
+        at_world_edge = self.check_world_edges()
+        if at_world_edge:
+            self.reverse()
 
 
 class SpikeMan(AnimatedEntity):
@@ -298,16 +298,19 @@ class SpikeMan(AnimatedEntity):
             self.images = self.game.spikeman_imgs_rt
 
     def update(self):
-        self.apply_gravity()
-        self.move_x()
-        self.check_platforms_x()
+        self.apply_gravity() #does this need to go first?
+        self.move_x() # does x movement need to happen before y?
+        hit_something = self.check_platforms_x()
         self.move_y()
         self.check_platforms_y()
-        self.check_platform_edges()
+        at_platform_edge = self.check_platform_edges() # does this need to be after gravity?
+        at_world_edge = self.check_world_edges()
+        if hit_something or at_platform_edge or at_world_edge:
+            self.reverse()
         self.animate()
 
 
-# Items
+# Items - Objects that alter the state of the hero
 class Gem(Entity):
 
     def __init__(self, game, image, loc):
@@ -334,19 +337,6 @@ class Heart(Entity):
         self.kill()
 
 
-# Interactables
-class Door(Entity):
-    
-    def __init__(self, x, y, image, destination, code=None):
-        super().__init__(x, y, image)
-        self.destination= destination
-        self.code = code
-
-    def interact(self):
-        if self.code is None or self.code in self.game.hero.keys:
-            self.game.hero.move_to(self.destination)
-        
-    
 class Key(Entity):
     
     def __init__(self, game, image, loc, code):
@@ -359,8 +349,30 @@ class Key(Entity):
         self.kill()
 
 
+# Interactables - Objects that alter the state of the world
+class Door(Entity):
+    
+    def __init__(self, x, y, image, destination, code=None):
+        super().__init__(x, y, image)
+        self.destination= destination
+        self.code = code
+
+    def interact(self):
+        if self.code is None or self.code in self.game.hero.keys:
+            self.game.hero.move_to(self.destination)
+        
+# Some Interactables pause the game so the hero can get information
 class Sign(Entity):
     
+    def __init__(self, game, image, loc, message):
+        super().__init__(game, image, loc)
+        self.message = message
+
+    def interact(self):
+       # print(self.message)
+       self.game.sign_message = self.message
+
+class NPC(Entity):
     def __init__(self, game, image, loc, message):
         super().__init__(game, image, loc)
         self.message = message

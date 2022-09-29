@@ -162,8 +162,8 @@ class Game:
                 
         if 'signs' in self.data:
             for sign in self.data['signs']:
-                self.interactables.add( Sign(self, self.sign_img, sign['loc'], sign['message']) )
-                
+                self.informables.add( Sign(self, self.sign_img, sign['loc'], sign['message']) )
+                                
         # Add the enemies
         if 'spikeballs' in self.data:
             for loc in self.data['spikeballs']:
@@ -305,6 +305,7 @@ class Game:
             y = 16
             self.screen.blit(self.heart_img, [x, y])
 
+    # Not sure if I like this here. Should more be in the Sign class?
     def show_message(self):
         text = self.default_font.render(self.sign_message, True, WHITE)
         rect = text.get_rect()
@@ -520,6 +521,7 @@ class Game:
         
         self.show_hud()
 
+        # this messes up door
         if self.hero.is_interacting:
             self.show_message()
 

@@ -78,11 +78,25 @@ class Font(pygame.font.Font):
 
 
 # Helper functions to simplify pygame syntax
-def display_text():
-    pass
+def draw_text(surface, text, font, color, loc, anchor='topleft', antialias=True):
+    text = str(text)
+    text = font.render(text, antialias, color)
+    rect = text.get_rect()
+
+    if   anchor == 'topleft'     : rect.topleft = loc
+    elif anchor == 'bottomleft'  : rect.bottomleft = loc
+    elif anchor == 'topright'    : rect.topright = loc
+    elif anchor == 'bottomright' : rect.bottomright = loc
+    elif anchor == 'midtop'      : rect.midtop = loc
+    elif anchor == 'midleft'     : rect.midleft = loc
+    elif anchor == 'midbottom'   : rect.midbottom = loc
+    elif anchor == 'midright'    : rect.midright = loc
+    elif anchor == 'center'      : rect.center = loc
+    
+    surface.blit(text, rect)
 
 
-# Draw a grid to help with level design
+# Draw a grid to help with level design (move this to editor module)
 def draw_grid(surface, grid_size, offset_x=0, offset_y=0, color=(125, 125, 125), font=Font(None, 16)):
     width = surface.get_width()
     height = surface.get_height()

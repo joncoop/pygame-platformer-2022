@@ -76,6 +76,10 @@ class Game:
         self.spikeman_imgs_lt = [img.get_flipped_x() for img in self.spikeman_imgs_rt]
         self.cloud_img = Image(CLOUD_IMG)
 
+        self.robot_imgs_walk_rt = [Image(img_path) for img_path in ROBOT_IMGS_WALK_RT]
+        self.robot_imgs_walk_lt = [img.get_flipped_x() for img in self.robot_imgs_walk_rt]
+        self.robot_imgs_talk = [Image(img_path) for img_path in ROBOT_IMGS_TALK]
+ 
         self.jump_snd = Sound(JUMP_SND, 0.5)
         self.gem_snd = Sound(GEM_SND)
         self.hurt_snd = Sound(HURT_SND)
@@ -111,6 +115,7 @@ class Game:
         self.items = pygame.sprite.Group()
         self.goals = pygame.sprite.Group()
         self.interactables = pygame.sprite.Group()
+        self.infobox = None
 
         # Load the level data
         with open(LEVELS[self.level - 1]) as f:
@@ -152,18 +157,7 @@ class Game:
         if 'keys' in self.data:
             for key in self.data['keys']:
                 self.items.add( Key(self, self.key_img, key['loc'], key['code']) )
-
-        if 'doors' in self.data:
-            for door in self.data['doors']:
-                if 'code' in door:
-                    self.interactables.add( Door(self, self.locked_doortop_img, door['loc'], door['dest'], door['code']) )
-                else:
-                    self.interactables.add( Door(self, self.doortop_img, door['loc'], door['dest']) )
-                
-        if 'signs' in self.data:
-            for sign in self.data['signs']:
-                self.informables.add( Sign(self, self.sign_img, sign['loc'], sign['message']) )
-                                
+   
         # Add the enemies
         if 'spikeballs' in self.data:
             for loc in self.data['spikeballs']:
@@ -176,6 +170,22 @@ class Game:
         if 'clouds' in self.data:
             for loc in self.data['clouds']:
                 self.enemies.add( Cloud(self, self.cloud_img, loc) )
+
+        # Add Interactables
+        if 'doors' in self.data:
+            for door in self.data['doors']:
+                if 'code' in door:
+                    self.interactables.add( Door(self, self.locked_doortop_img, door['loc'], door['dest'], door['code']) )
+                else:
+                    self.interactables.add( Door(self, self.doortop_img, door['loc'], door['dest']) )
+
+        if 'signs' in self.data:
+            for sign in self.data['signs']:
+                self.interactables.add( Sign(self, self.sign_img, sign['loc'], sign['message']) )
+                                
+        if 'npcs' in self.data:
+            for npc in self.data['npcs']:
+                self.interactables.add( NPC(self, self.robot_imgs_walk_rt, npc['loc'], npc['message']) )
 
         # Add the goal
         if 'goals' in self.data:
@@ -271,6 +281,8 @@ class Game:
         self.screen.blit(text, rect)
 
     def show_hud(self):
+        # what about an HUD class? Maybe make pause not a stage and show it in the HUD as well.
+
         ##text = self.default_font.render('S: ' + str(self.hero.score), True, WHITE)
         ##rect = text.get_rect()
         ##rect.top = 16
@@ -305,34 +317,21 @@ class Game:
             y = 16
             self.screen.blit(self.heart_img, [x, y])
 
-    # Not sure if I like this here. Should more be in the Sign class?
-    def show_message(self):
-        text = self.default_font.render(self.sign_message, True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.top = HEIGHT // 2
-
-        outline = [rect.left - 40, rect.top - 40, rect.width + 80, rect.height + 80]
-
-        pygame.draw.rect(self.screen, BROWN, outline, 0, 6)
-        pygame.draw.rect(self.screen, BLACK, outline, 2, 6)
-        self.screen.blit(text, rect)
-
     def toggle_mute(self):
+        self.mute = not self.mute
+        
         if self.mute:
-            for sound in self.all_sounds:
-                sound.unmute()
-
-            for music in self.all_music:
-                music.unmute()
-        else:
             for sound in self.all_sounds:
                 sound.mute()
 
             for music in self.all_music:
                 music.mute()
+        else:
+            for sound in self.all_sounds:
+                sound.unmute()
 
-        self.mute = not self.mute
+            for music in self.all_music:
+                music.unmute()
 
     def toggle_edit_mode(self):
         if self.stage == EDIT:
@@ -457,8 +456,8 @@ class Game:
                         self.hero.jump()
                     elif event.key == CONTROLS['interact']:
                         self.hero.interact()
-                    elif event.key == CONTROLS['uninteract']:
-                        self.hero.is_interacting = False
+                    elif event.key == CONTROLS['continue']:
+                        self.hero.uninteract()
 
                 elif self.stage == PAUSE:
                     if event.key == pygame.K_p:
@@ -507,8 +506,7 @@ class Game:
 
     def render(self):
         offset_x, offset_y = self.get_offsets()
-        offset_x, offset_y = self.get_offsets()
-        bg_offset_x = -1 * (0.5 * offset_x % self.bg_img.get_width())
+        bg_offset_x = -1 * (0.5 * offset_x % self.bg_img.get_width()) # 0.5 is 'magic'. not good. make it a variable in the level
 
         #screen.fill(SKY_BLUE)
         self.screen.blit(self.bg_img, [bg_offset_x, 0])
@@ -516,14 +514,17 @@ class Game:
 
         # will this still handle layers?
         for sprite in self.all_sprites:
+            # what about making is_close(sprite) in Entity. Then,
+            # if self.hero.is_close(sprite):
+            #     blit...
+            # it seems better gramatically
             if self.are_close(sprite, self.hero):
                 self.screen.blit(sprite.image, [sprite.rect.x - offset_x, sprite.rect.y - offset_y])
+
+        if self.infobox is not None:
+            self.infobox.draw(self.screen)
         
         self.show_hud()
-
-        # this messes up door
-        if self.hero.is_interacting:
-            self.show_message()
 
         if self.stage == START:
             self.show_title_screen()

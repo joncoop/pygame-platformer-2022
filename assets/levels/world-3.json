@@ -27,7 +27,7 @@
         [9, 6], [14, 5]
     ],
     "spikeballs": [
-        [5, 2], [13, 7]
+        [5, 2]
     ],
     "clouds": [
         [10, 1]
@@ -36,6 +36,7 @@
         [11, 3]
     ],
     "signs": [
-        {"loc": [20, 7], "message": "This is a sign!"}
+        {"loc": [10, 7], "message": "This is a sign!"},
+        {"loc": [20, 7], "message": "This is another sign!"}
     ]
 }

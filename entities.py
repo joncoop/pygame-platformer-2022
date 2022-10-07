@@ -72,7 +72,7 @@ class Entity(pygame.sprite.Sprite):
             self.rect.right = self.game.world_width
             at_edge = True
 
-        if self.rect.top > self.game.world_height:
+        if self.rect.top > self.game.world_height: # should this move into enemy class?
             self.kill()
 
         return at_edge
@@ -154,12 +154,12 @@ class Hero(AnimatedEntity):
     def go_left(self):
         self.vx = -1 * self.speed
         self.facing_right = False
-        self.is_interacting = False
+        self.uninteract()
     
     def go_right(self):
         self.vx = self.speed
         self.facing_right = True
-        self.is_interacting = False
+        self.uninteract()
 
     def stop(self):
         self.vx = 0
@@ -168,7 +168,7 @@ class Hero(AnimatedEntity):
         if self.on_platform():
             self.vy = -1 * self.jump_power
             self.game.jump_snd.play()
-        self.is_interacting = False
+        self.uninteract()
 
     def is_alive(self):
         return self.hearts > 0
@@ -229,8 +229,11 @@ class Hero(AnimatedEntity):
         hits = pygame.sprite.spritecollide(self, self.game.interactables, False)
 
         for interactable in hits:
-            interactable.interact()
-            self.is_interacting = True
+            interactable.interact(self)
+
+    def uninteract(self):
+        self.is_interacting = False
+        self.game.infobox = None
 
     def update(self):
         self.apply_gravity()
@@ -357,9 +360,9 @@ class Door(Entity):
         self.destination= destination
         self.code = code
 
-    def interact(self):
-        if self.code is None or self.code in self.game.hero.keys:
-            self.game.hero.move_to(self.destination)
+    def interact(self, character):
+        if self.code is None or self.code in character.keys:
+            character.move_to(self.destination)
         
 # Some Interactables pause the game so the hero can get information
 class Sign(Entity):
@@ -367,16 +370,86 @@ class Sign(Entity):
     def __init__(self, game, image, loc, message):
         super().__init__(game, image, loc)
         self.message = message
+        self.active = False
 
-    def interact(self):
-       # print(self.message)
-       self.game.sign_message = self.message
+    def interact(self, character):
+        character.is_interacting = True
+        self.game.infobox = SignPopup(self.game, self.message)
 
-class NPC(Entity):
-    def __init__(self, game, image, loc, message):
-        super().__init__(game, image, loc)
+        
+class NPC(AnimatedEntity):
+    def __init__(self, game, images, loc, message):
+        super().__init__(game, images, loc)
         self.message = message
 
-    def interact(self):
-       # print(self.message)
-       self.game.sign_message = self.message
+        self.vx = NPC_SPEED
+        self.vy = 0
+
+    def interact(self, character):
+        character.is_interacting = True
+        self.game.infobox = SpeechBubble(self.game, self.message)
+
+    def set_image_list(self):
+        if self.vx < 0:
+            self.images = self.game.robot_imgs_walk_lt
+        else:
+            self.images = self.game.robot_imgs_walk_rt
+
+    def update(self):
+        self.apply_gravity() #does this need to go first?
+        self.move_x() # does x movement need to happen before y?
+        hit_something = self.check_platforms_x()
+        self.move_y()
+        self.check_platforms_y()
+        at_platform_edge = self.check_platform_edges() # does this need to be after gravity?
+        at_world_edge = self.check_world_edges()
+        if hit_something or at_platform_edge or at_world_edge:
+            self.reverse()
+        self.animate()
+
+
+# Readables
+class SignPopup:
+
+    def __init__(self, game, message):
+        self.game = game
+        self.message = message
+
+    def draw(self, surface):
+        text = self.game.default_font.render(self.message, True, WHITE)
+        rect = text.get_rect()
+        rect.centerx = WIDTH // 2
+        rect.centery = HEIGHT // 2
+
+        outline = [rect.left - GRID_SIZE / 2, rect.top - GRID_SIZE / 2, rect.width + GRID_SIZE, rect.height + GRID_SIZE]
+
+        pygame.draw.rect(surface, BROWN, outline, 0, 6)
+        pygame.draw.rect(surface, BLACK, outline, 2, 6)
+        surface.blit(text, rect)
+
+
+# figure out how to make this advance through messages. what key to use? still down?
+class SpeechBubble:
+    def __init__(self, game, message):
+        self.game = game
+        self.message = message
+
+    def draw(self, surface):
+        text = self.game.default_font.render(self.message, True, BLACK)
+        rect = text.get_rect()
+        rect.centerx = WIDTH // 2
+        rect.centery = HEIGHT // 2
+
+        outline = [rect.left - GRID_SIZE / 2, rect.top - GRID_SIZE / 2, rect.width + GRID_SIZE, rect.height + GRID_SIZE]
+
+        pygame.draw.rect(surface, WHITE, outline, 0, 6)
+        pygame.draw.rect(surface, BLACK, outline, 2, 6)
+        pygame.draw.polygon(surface, WHITE, [[rect.centerx - 40, rect.bottom - 2 + GRID_SIZE / 2], [rect.centerx + 40, rect.bottom - 5 + GRID_SIZE / 2], [rect.centerx, rect.bottom + 3 * GRID_SIZE // 2]])
+        pygame.draw.line(surface, BLACK, [rect.centerx - 40, rect.bottom - 2 + GRID_SIZE / 2], [rect.centerx, rect.bottom + 3 * GRID_SIZE // 2], 2)
+        pygame.draw.line(surface, BLACK, [rect.centerx + 40, rect.bottom - 2 + GRID_SIZE / 2], [rect.centerx, rect.bottom + 3 * GRID_SIZE // 2], 2)
+
+        surface.blit(text, rect)
+
+
+
+

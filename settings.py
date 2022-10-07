@@ -63,6 +63,15 @@ SPIKEMAN_IMGS = ['assets/images/characters/spikeman_walk1.png',
 
 CLOUD_IMG = 'assets/images/characters/cloud.png'
 
+''' npcs '''
+ROBOT_IMGS_WALK_RT = ['assets/images/characters/robot_walk1.png',
+                      'assets/images/characters/robot_walk1.png',
+                       'assets/images/characters/robot_walk1.png',
+                       'assets/images/characters/robot_walk1.png',
+                       'assets/images/characters/robot_walk1.png',
+                       'assets/images/characters/robot_walk1.png']
+ROBOT_IMGS_TALK = ['assets/images/characters/robot_talk.png']
+
 
 # Sounds
 JUMP_SND = 'assets/sounds/jump.wav'
@@ -79,14 +88,15 @@ PLAYING_MUSIC = 'assets/music/cooking_mania.wav'
 # Levels
 LEVELS = ['assets/levels/world-1.json',
           'assets/levels/world-2.json',
-          'assets/levels/world-3.json']
+          'assets/levels/world-3.json',
+          'assets/levels/world-4.json']
 
 # Controls
 CONTROLS = {'left': pygame.K_LEFT,
             'right': pygame.K_RIGHT,
             'jump': pygame.K_SPACE,
             'interact': pygame.K_UP,
-            'uninteract': pygame.K_DOWN}
+            'continue': pygame.K_DOWN}
 
 
 # Physics settings
@@ -101,6 +111,8 @@ HERO_JUMP_POWER = 22
 SPIKEBALL_SPEED = 2
 SPIKEMAN_SPEED = 2
 CLOUD_SPEED = 2
+
+NPC_SPEED = 1
 
 # Scoring
 POINTS_PER_LEVEL = 100

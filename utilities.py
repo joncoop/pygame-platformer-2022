@@ -1,6 +1,5 @@
 # Imports
 import pygame
-pygame.init() # Needed for loading a font. Don't know why.
 
 
 class Image(pygame.surface.Surface):
@@ -11,11 +10,37 @@ class Image(pygame.surface.Surface):
         super().__init__([width, height], pygame.SRCALPHA, 32)
         self.blit(image, [0, 0])
     
-    def get_flipped_x(self):
+    def flip_x(self):
         return pygame.transform.flip(self, True, False)
 
-    def get_flipped_y(self):
+    def flip_y(self):
         return pygame.transform.flip(self, False, True)
+
+
+# What about separate Sounds and Music classes? Then same syntax add/play. Can mute independently.
+class Audio():
+
+    def __init__(self):
+        self.music = {}
+        self.sounds = {}
+
+    def add_music(self, name, path, volume=1.0, loops=-1):
+        self.music[name] = Music(path, volume, loops)
+
+    def add_sound(self, name, path, volume=1.0):
+        self.sounds[name] = Sound(path, volume)
+
+    def play_music(self, name):
+        self.music[name].play()
+
+    def play_sound(self, name):
+        self.sounds[name].play()
+
+    def mute(self):
+        pygame.mixer.stop()
+
+    def unmute(self):
+        pass
 
 
 class Sound(pygame.mixer.Sound):
@@ -31,6 +56,7 @@ class Sound(pygame.mixer.Sound):
     
     def mute(self):
         self.on = False
+        # stop active sounds or just let them play out?
 
     def unmute(self):
         self.on = True
@@ -95,27 +121,3 @@ def draw_text(surface, text, font, color, loc, anchor='topleft', antialias=True)
     
     surface.blit(text, rect)
 
-
-# Draw a grid to help with level design (move this to editor module)
-def draw_grid(surface, grid_size, offset_x=0, offset_y=0, color=(125, 125, 125), font=Font(None, 16)):
-    width = surface.get_width()
-    height = surface.get_height()
-
-    for x in range(0, width + grid_size, grid_size):
-        adj_x = x - offset_x % grid_size
-        pygame.draw.line(surface, color, [adj_x, 0], [adj_x, height], 1)
-
-    for y in range(0, height + grid_size, grid_size):
-        adj_y = y - offset_y % grid_size
-        pygame.draw.line(surface, color, [0, adj_y], [width, adj_y], 1)
-
-    for x in range(0, width + grid_size, grid_size):
-        for y in range(0, height + grid_size, grid_size):
-            adj_x = x - offset_x % grid_size + 4
-            adj_y = y - offset_y % grid_size + 4
-            disp_x = x // grid_size + offset_x // grid_size
-            disp_y = y // grid_size + offset_y // grid_size
-            
-            point = f'({disp_x}, {disp_y})'
-            text = font.render(point, True, color)
-            surface.blit(text, [adj_x, adj_y])

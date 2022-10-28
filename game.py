@@ -2,13 +2,18 @@
 import json
 import pygame
 
+from editor import *
 from settings import *
 from utilities import *
 from entities import *
+from overlays import *
 
 
-# Constants
-''' stages '''
+pygame.mixer.pre_init() # Does this actually help? I can't hear a difference.
+pygame.init()
+
+# Constants (Should any of this move to settings?)
+''' stages/scenes '''
 START = 0
 PLAYING = 1
 PAUSE = 2
@@ -17,7 +22,7 @@ WIN = 4
 LOSE = 5
 EDIT = 6
 
-''' layers '''
+''' layers (doesn't work yet) '''
 BACKGROUND_LAYER = 0  # Decorative tiles that entities pass in front of
 ACTIVE_LAYER = 1      # Contains entities that can interact
 FOREGROUND_LAYER = 2  # Decorative tiles that entities pass behind
@@ -34,25 +39,33 @@ class Game:
         self.clock = pygame.time.Clock()
 
         self.running = True
-        self.grid_on = False
         self.mute = False
 
         self.load_assets()
         self.new_game()
 
+        self.title_screen = TitleScreen(self)
+        self.win_screen = WinScreen(self)
+        self.lose_screen = LoseScreen(self)
+        self.level_complete_screen = LevelCompleteScreen(self)
+        self.pause_screen = PauseScreen(self)
+        self.hud = HUD(self)
+
         # for editor, move to separate editor class
+        self.grid = Grid(self)
         self.tile_index = 0 
         self.tile_images = [None, self.block_img, self.grass_dirt_img]
 
     def load_assets(self):
-        ##self.bg_img = Image(BACKGROUND_IMG)
+        #self.bg_img = Image(BACKGROUND_IMG)
 
+        # make animated entities dict based?
         self.hero_imgs_idle_rt = [Image(img_path) for img_path in HERO_IMGS_IDLE_RT]
         self.hero_imgs_walk_rt = [Image(img_path) for img_path in HERO_IMGS_WALK_RT]
         self.hero_imgs_jump_rt = [Image(img_path) for img_path in HERO_IMGS_JUMP_RT]
-        self.hero_imgs_idle_lt = [img.get_flipped_x() for img in self.hero_imgs_idle_rt]
-        self.hero_imgs_walk_lt = [img.get_flipped_x() for img in self.hero_imgs_walk_rt]
-        self.hero_imgs_jump_lt = [img.get_flipped_x() for img in self.hero_imgs_jump_rt]
+        self.hero_imgs_idle_lt = [img.flip_x() for img in self.hero_imgs_idle_rt]
+        self.hero_imgs_walk_lt = [img.flip_x() for img in self.hero_imgs_walk_rt]
+        self.hero_imgs_jump_lt = [img.flip_x() for img in self.hero_imgs_jump_rt]
 
         self.grass_dirt_img = Image(GRASS_IMG)
         self.block_img = Image(BLOCK_IMG)
@@ -73,23 +86,22 @@ class Game:
 
         self.spikeball_imgs = [Image(img_path) for img_path in SPIKEBALL_IMGS]
         self.spikeman_imgs_rt = [Image(img_path) for img_path in SPIKEMAN_IMGS]
-        self.spikeman_imgs_lt = [img.get_flipped_x() for img in self.spikeman_imgs_rt]
+        self.spikeman_imgs_lt = [img.flip_x() for img in self.spikeman_imgs_rt]
         self.cloud_img = Image(CLOUD_IMG)
 
         self.robot_imgs_walk_rt = [Image(img_path) for img_path in ROBOT_IMGS_WALK_RT]
-        self.robot_imgs_walk_lt = [img.get_flipped_x() for img in self.robot_imgs_walk_rt]
+        self.robot_imgs_walk_lt = [img.flip_x() for img in self.robot_imgs_walk_rt]
         self.robot_imgs_talk = [Image(img_path) for img_path in ROBOT_IMGS_TALK]
  
-        self.jump_snd = Sound(JUMP_SND, 0.5)
-        self.gem_snd = Sound(GEM_SND)
-        self.hurt_snd = Sound(HURT_SND)
-        self.powerup_snd = Sound(POWERUP_SND)
-        self.level_up_snd = Sound(LEVEL_UP_SND)
-        self.all_sounds = [self.jump_snd, self.gem_snd, self.hurt_snd, self.powerup_snd]
+        self.audio = Audio()
+        self.audio.add_music("title_music", TITLE_MUSIC)
+        self.audio.add_music("main_theme", MAIN_THEME)
 
-        self.title_music = Music(TITLE_MUSIC)
-        self.playing_music = Music(PLAYING_MUSIC, 0.6)
-        self.all_music = [self.title_music, self.playing_music]
+        self.audio.add_sound('jump', JUMP_SND)
+        self.audio.add_sound('gem', GEM_SND)
+        self.audio.add_sound('hurt', HURT_SND)
+        self.audio.add_sound('powerup', POWERUP_SND)
+        self.audio.add_sound('level_up', LEVEL_UP_SND)
 
         self.title_font = Font(PRIMARY_FONT, 80)
         self.subtitle_font = Font(SECONDARY_FONT, 64)
@@ -106,7 +118,8 @@ class Game:
         self.sign_message = None # not sure if this is a good place for this
 
         self.load_level()
-        self.title_music.play()
+        #self.title_music.play()
+        self.audio.play_music('title_music')
 
     def load_level(self):
         # Make sprite groups
@@ -201,13 +214,13 @@ class Game:
     
     def start(self):
         self.stage = PLAYING
-        self.playing_music.play()
+        self.audio.play_music('main_theme')
 
     def complete_level(self):
         self.stage = LEVEL_COMPLETE
         self.transition_timer = 3 * FPS
-        self.playing_music.stop()
-        self.level_up_snd.play()
+        #self.playing_music.stop()
+        self.audio.play_sound('level_up')
         self.hero.score += POINTS_PER_LEVEL
 
     def advance(self):
@@ -221,192 +234,6 @@ class Game:
     def lose(self):
         self.stage = LOSE
 
-    def show_title_screen(self):
-        text = self.title_font.render(TITLE, True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.bottom = HEIGHT // 2 - 8
-        self.screen.blit(text, rect)
-    
-        text = self.default_font.render("Press 'SPACE' to start.", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.top = HEIGHT // 2 + 8
-        self.screen.blit(text, rect)
-        
-    def show_level_complete_screen(self):
-        text = self.subtitle_font.render("Level Complete!", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.bottom = HEIGHT // 2 - 8
-        self.screen.blit(text, rect)
-
-    def show_win_screen(self):
-        text = self.subtitle_font.render("You win!", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.bottom = HEIGHT // 2 - 8
-        self.screen.blit(text, rect)
-    
-        text = self.default_font.render("Press 'r' to play again.", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.top = HEIGHT // 2 + 8
-        self.screen.blit(text, rect)
-        
-    def show_lose_screen(self):
-        text = self.subtitle_font.render("You lose.", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.bottom = HEIGHT // 2 - 8
-        self.screen.blit(text, rect)
-    
-        text = self.default_font.render("Press 'r' to play again.", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.top = HEIGHT // 2 + 8
-        self.screen.blit(text, rect)
-    
-    def show_pause_screen(self):
-        text = self.subtitle_font.render("Paused", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.bottom = HEIGHT // 2 - 8
-        self.screen.blit(text, rect)
-    
-        text = self.default_font.render("Press 'p' to continue", True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.top = HEIGHT // 2 + 8
-        self.screen.blit(text, rect)
-
-    def show_hud(self):
-        # what about an HUD class? Maybe make pause not a stage and show it in the HUD as well.
-
-        ##text = self.default_font.render('S: ' + str(self.hero.score), True, WHITE)
-        ##rect = text.get_rect()
-        ##rect.top = 16
-        ##rect.left = 16
-        #self.screen.blit(text, rect)
-    
-        ##text = self.default_font.render('H: ' + str(self.hero.hearts), True, WHITE)
-        ##rect = text.get_rect()
-        ##rect.top = 48
-        ##rect.left = 16
-        ##self.screen.blit(text, rect)
-    
-        ##text = self.default_font.render('L: ' + str(self.level), True, WHITE)
-        ##rect = text.get_rect()
-        ##rect.top = 80
-        ##rect.left = 16
-        ##self.screen.blit(text, rect)
-
-        text = self.default_font.render(str(self.hero.score), True, WHITE)
-        rect = text.get_rect()
-        rect.midtop = WIDTH // 2, 16
-        self.screen.blit(text, rect)
-
-        self.screen.blit(self.gem_img, [WIDTH - 100, 16])
-        text = self.default_font.render('x' + str(self.hero.gems), True, WHITE)
-        rect = text.get_rect()
-        rect.topleft = WIDTH - 60, 24
-        self.screen.blit(text, rect)
-
-        for i in range(self.hero.hearts):
-            x = i * 36 + 16
-            y = 16
-            self.screen.blit(self.heart_img, [x, y])
-
-    def toggle_mute(self):
-        self.mute = not self.mute
-        
-        if self.mute:
-            for sound in self.all_sounds:
-                sound.mute()
-
-            for music in self.all_music:
-                music.mute()
-        else:
-            for sound in self.all_sounds:
-                sound.unmute()
-
-            for music in self.all_music:
-                music.unmute()
-
-    def toggle_edit_mode(self):
-        if self.stage == EDIT:
-            self.stage = self.last_stage
-            self.grid_on = False
-        else:
-            self.last_stage = self.stage
-            self.grid_on = True
-            self.stage = EDIT
-
-    def show_edit_screen(self):
-        tile_names = ['erase', 'block', 'grass']
-
-        text = self.default_font.render(tile_names[self.tile_index], True, WHITE)
-        rect = text.get_rect()
-        rect.x = 16
-        rect.bottom = HEIGHT - 16
-        self.screen.blit(text, rect)
- 
-    def add_tile(self):
-        x, y = pygame.mouse.get_pos()
-        offset_x, offset_y = self.get_offsets()
-        
-        loc = [(x + offset_x) // GRID_SIZE, (y + offset_y) // GRID_SIZE]
-
-        for tile in self.platforms:
-            existing_tile_loc = [tile.rect.x // 64, tile.rect.y // 64]
-            if existing_tile_loc == loc:
-                tile.kill()
-                if loc in self.data['blocks']:
-                    self.data['blocks'].remove(loc)
-                if loc in self.data['grass']:
-                    self.data['grass'].remove(loc)
-
-        if self.tile_index > 0:
-            self.current_img = self.tile_images[self.tile_index]
-            tile = Platform(self, self.current_img, loc)
-            self.platforms.add(tile)
-            self.all_sprites.add(tile) 
-
-            if self.tile_index == 1:
-                if not loc in self.data['blocks']:
-                    self.data['blocks'].append(loc) 
-            elif self.tile_index == 2:
-                if not loc in self.data['grass']:
-                    self.data['grass'].append(loc)
-
-    def save(self):
-        path = LEVELS[self.level - 1] # Remember zero indexing!
-        print(path)
-        
-        with open(path, 'w') as f:
-            json.dump(self.data, f) # messy way, but works for now
-
-            # cleaner way (still not that nice)
-            tab = '    '
-            text = '{\n'
-            text += tab + str(self.data['width']) + ',\n'
-            text += tab + str(self.data['height']) + ',\n'
-            text += tab + str(self.data['gravity']) + ',\n'
-            text += tab + str(self.data['terminal_velocity']) + ',\n'
-            text += tab + str(self.data['background']) + ',\n'
-            text += tab + str(self.data['start']) + ',\n'
-            text += tab + str(self.data['grass']) + ',\n'
-            text += tab + str(self.data['blocks']) + ',\n'
-            text += tab + str(self.data['gems']) + ',\n'
-            text += tab + str(self.data['hearts']) + ',\n'
-            text += tab + str(self.data['goals']) + ',\n'
-            text += tab + str(self.data['spikeballs']) + ',\n'
-            text += tab + str(self.data['clouds']) + ',\n'
-            text += tab + str(self.data['spikemen']) + '\n'
-            text += '}'
-
-            #f.write(text) # I only wrote values, not keys above
-        
     def get_offsets(self):
         if self.hero.rect.centerx < WIDTH // 2:
             offset_x = 0
@@ -430,13 +257,12 @@ class Game:
                 self.running = False
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_g: 
-                    self.grid_on = not self.grid_on
+                if event.key == pygame.K_g: # eventually toggle editor mode with 'e' 
+                    self.grid.toggle()
                 elif event.key == pygame.K_m:
-                    self.toggle_mute()
-                elif event.key == pygame.K_e:
-                    self.toggle_edit_mode()
+                    self.audio.toggle_mute()
 
+                # this shouldn't go here?
                 if self.stage == EDIT:
                     if event.key == pygame.K_RIGHT:
                         self.tile_index = (self.tile_index + 1) % len(self.tile_images)
@@ -524,23 +350,20 @@ class Game:
         if self.infobox is not None:
             self.infobox.draw(self.screen)
         
-        self.show_hud()
+        self.hud.draw(self.screen)
 
         if self.stage == START:
-            self.show_title_screen()
+            self.title_screen.draw(self.screen)
         elif self.stage == LEVEL_COMPLETE:
-            self.show_level_complete_screen()
+            self.level_complete_screen.draw(self.screen)
         elif self.stage == WIN:
-            self.show_win_screen()
+            self.win_screen.draw(self.screen)
         elif self.stage == LOSE:
-            self.show_lose_screen()
+            self.lose_screen.draw(self.screen)
         elif self.stage == PAUSE:
-            self.show_pause_screen()
-        elif self.stage == EDIT:
-            self.show_edit_screen()
+            self.pause_screen.draw(self.screen)
 
-        if self.grid_on:
-            draw_grid(self.screen, GRID_SIZE, offset_x, offset_y)
+        self.grid.draw(self.screen)
         
     def play(self):
         while self.running:

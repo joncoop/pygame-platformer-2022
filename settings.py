@@ -1,6 +1,5 @@
 # Imports
 import pygame
-from utilities import *
 
 
 # Window settings
@@ -82,7 +81,7 @@ POWERUP_SND = 'assets/sounds/pickup_item.wav'
 
 # Music
 TITLE_MUSIC = 'assets/music/calm_happy.ogg'
-PLAYING_MUSIC = 'assets/music/cooking_mania.wav'
+MAIN_THEME = 'assets/music/cooking_mania.wav'
 
 
 # Levels
@@ -91,7 +90,7 @@ LEVELS = ['assets/levels/world-1.json',
           'assets/levels/world-3.json',
           'assets/levels/world-4.json']
 
-# Controls
+# Controls (I hate that I have to refer to pygame here. Would like to get rid of import too.)
 CONTROLS = {'left': pygame.K_LEFT,
             'right': pygame.K_RIGHT,
             'jump': pygame.K_SPACE,

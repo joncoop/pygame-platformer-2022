@@ -1,129 +1,9 @@
 # Imports
 import pygame
+from base_classes import *
 from settings import *
 
-
-# Base classes
-class Entity(pygame.sprite.Sprite):
-
-    def __init__(self, game, image, loc=[0, 0]):
-        super().__init__()
-
-        self.game = game
-        self.image = image
-        self.rect = self.image.get_rect()
-        self.move_to(loc)
-
-    def move_to(self, loc):
-        self.rect.centerx = loc[0] * GRID_SIZE + GRID_SIZE // 2
-        self.rect.centery = loc[1] * GRID_SIZE + GRID_SIZE // 2
-
-    def apply_gravity(self):
-        ##self.vy += GRAVITY
-        self.vy += self.game.gravity
-        self.vy = min(self.vy, self.game.terminal_velocity)
-    
-    def reverse(self):
-        self.vx *= -1
-
-    def on_platform(self):
-        self.rect.y += 2
-        hits = pygame.sprite.spritecollide(self, self.game.platforms, False)
-        self.rect.y -= 2
-
-        return len(hits) > 0
-
-    def move_x(self):
-        self.rect.x += self.vx
-
-    def check_platforms_x(self):
-        hits = pygame.sprite.spritecollide(self, self.game.platforms, False)
-
-        for platform in hits:
-            if self.vx < 0:
-                self.rect.left = platform.rect.right
-            elif self.vx > 0:
-                self.rect.right = platform.rect.left
-
-        return len(hits) > 0
-
-    def move_y(self):
-        self.rect.y += self.vy
-
-    def check_platforms_y(self):
-        hits = pygame.sprite.spritecollide(self, self.game.platforms, False)
-
-        for platform in hits:
-            if self.vy < 0:
-                self.rect.top = platform.rect.bottom
-            elif self.vy > 0:
-                self.rect.bottom = platform.rect.top
         
-        if hits:
-            self.vy = 0
-
-    def check_world_edges(self):
-        at_edge = False
-
-        if self.rect.left < 0:
-            self.rect.left = 0
-            at_edge = True
-        elif self.rect.right > self.game.world_width:
-            self.rect.right = self.game.world_width
-            at_edge = True
-
-        if self.rect.top > self.game.world_height: # should this move into enemy class?
-            self.kill()
-
-        return at_edge
-
-    def check_platform_edges(self):
-        self.rect.y += 2
-        hits = pygame.sprite.spritecollide(self, self.game.platforms, False)
-        self.rect.y -= 2
-
-        at_edge = True
-
-        for platform in hits:
-            if self.vx > 0:
-                if platform.rect.right >= self.rect.right:
-                    at_edge = False
-            if self.vx < 0:
-                if platform.rect.left <= self.rect.left:
-                    at_edge = False
-
-        return at_edge
-
-
-class AnimatedEntity(Entity):
-    
-    def __init__(self, game, images, loc=[0, 0]):
-        super().__init__(game, images[0], loc)
-
-        self.images = images
-        self.image_index = 0
-        self.ticks = 0
-        self.frame_rate = 10
-
-    def set_image_list(self):
-        self.images = self.images
-
-    def animate(self):
-        self.set_image_list()
-        
-        self.ticks += 1
-        
-        if self.ticks % self.frame_rate == 0:
-            if self.image_index >= len(self.images):
-                self.image_index = 0
-                
-            self.image = self.images[self.image_index]
-            self.image_index += 1
-        
-    def update(self):
-        self.animate()
-        
-
 # Tiles
 class Platform(Entity):
 
@@ -167,7 +47,7 @@ class Hero(AnimatedEntity):
     def jump(self):
         if self.on_platform():
             self.vy = -1 * self.jump_power
-            self.game.jump_snd.play()
+            self.game.audio.play_sound('jump')
         self.uninteract()
 
     def is_alive(self):
@@ -207,7 +87,7 @@ class Hero(AnimatedEntity):
             for enemy in hits:
                 self.hearts -= 1
                 self.escape_time = 30
-                self.game.hurt_snd.play()
+                self.game.audio.play_sound('hurt')
 
                 if self.rect.centerx < enemy.rect.centerx:
                     self.vx = -15
@@ -322,7 +202,7 @@ class Gem(Entity):
     def apply(self, character):
         character.score += POINTS_PER_COIN
         character.gems += 1
-        self.game.gem_snd.play()
+        self.game.audio.play_sound('gem')
         self.kill()
 
 
@@ -336,7 +216,7 @@ class Heart(Entity):
         #character.hearts += 1
         #character.hearts = min(charcter.hearts + 1, character.max_hearts)
         character.hearts = character.max_hearts
-        self.game.powerup_snd.play()
+        self.game.audio.play_sound('powerup')
         self.kill()
 
 
@@ -348,7 +228,7 @@ class Key(Entity):
 
     def apply(self, character):
         character.keys.append(self.code)
-        self.game.powerup_snd.play()
+        self.game.audio.play_sound('powerup')
         self.kill()
 
 
@@ -363,7 +243,8 @@ class Door(Entity):
     def interact(self, character):
         if self.code is None or self.code in character.keys:
             character.move_to(self.destination)
-        
+
+
 # Some Interactables pause the game so the hero can get information
 class Sign(Entity):
     
@@ -417,15 +298,18 @@ class SignPopup:
 
     def draw(self, surface):
         text = self.game.default_font.render(self.message, True, WHITE)
-        rect = text.get_rect()
-        rect.centerx = WIDTH // 2
-        rect.centery = HEIGHT // 2
+        text_rect = text.get_rect()
+        text_rect.centerx = WIDTH // 2
+        text_rect.centery = HEIGHT // 2
 
-        outline = [rect.left - GRID_SIZE / 2, rect.top - GRID_SIZE / 2, rect.width + GRID_SIZE, rect.height + GRID_SIZE]
+        background_rect = text_rect.copy()
+        background_rect.width = background_rect.width + GRID_SIZE // 2
+        background_rect.height = background_rect.height + GRID_SIZE // 2
+        background_rect.center = text_rect.center
 
-        pygame.draw.rect(surface, BROWN, outline, 0, 6)
-        pygame.draw.rect(surface, BLACK, outline, 2, 6)
-        surface.blit(text, rect)
+        pygame.draw.rect(surface, BROWN, background_rect, 0, 6)
+        pygame.draw.rect(surface, BLACK, background_rect, 2, 6)
+        surface.blit(text, text_rect)
 
 
 # figure out how to make this advance through messages. what key to use? still down?
@@ -435,6 +319,7 @@ class SpeechBubble:
         self.message = message
 
     def draw(self, surface):
+        # this is gross. make it more like sign
         text = self.game.default_font.render(self.message, True, BLACK)
         rect = text.get_rect()
         rect.centerx = WIDTH // 2
@@ -449,7 +334,3 @@ class SpeechBubble:
         pygame.draw.line(surface, BLACK, [rect.centerx + 40, rect.bottom - 2 + GRID_SIZE / 2], [rect.centerx, rect.bottom + 3 * GRID_SIZE // 2], 2)
 
         surface.blit(text, rect)
-
-
-
-

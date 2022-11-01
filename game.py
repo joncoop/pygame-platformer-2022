@@ -5,8 +5,12 @@ import pygame
 from editor import *
 from settings import *
 from utilities import *
-from entities import *
+from hero import *
+from enemies import *
+from items import *
+from interactables import *
 from overlays import *
+from platforms import *
 
 
 pygame.mixer.pre_init() # Does this actually help? I can't hear a difference.
@@ -39,7 +43,6 @@ class Game:
         self.clock = pygame.time.Clock()
 
         self.running = True
-        self.mute = False
 
         self.load_assets()
         self.new_game()
@@ -126,7 +129,6 @@ class Game:
         self.platforms = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.items = pygame.sprite.Group()
-        self.goals = pygame.sprite.Group()
         self.interactables = pygame.sprite.Group()
         self.infobox = None
 
@@ -148,6 +150,7 @@ class Game:
         self.hero.move_to(loc)
         self.hero.vx = 0
         self.hero.vy = 0
+        self.hero.reached_goal = False
 
         # Add the platforms
         if 'grass' in self.data:   
@@ -184,6 +187,21 @@ class Game:
             for loc in self.data['clouds']:
                 self.enemies.add( Cloud(self, self.cloud_img, loc) )
 
+        # Another way. But not sure how to make this consistent with other entities, not all items take same args (use *kwargs?)
+        # Also, should images go directly in the entity subblass? 
+        """         
+        if 'enemies' in self.data:
+            for enemy in self.data['enemies']:
+                if enemy['kind'] == "SpikeBall":
+                    new_enemy = SpikeBall(self, self.spikeball_imgs, loc)
+                elif enemy['kind'] == "SpikeMan":
+                    new_enemy = SpikeMan(self, self.spikeball_imgs, loc)
+                elif enemy['kind'] == "Cloud":
+                    new_enemy = Cloud(self, self.spikeball_imgs, loc)
+
+                self.enemies.add(new_enemy) 
+        """
+
         # Add Interactables
         if 'doors' in self.data:
             for door in self.data['doors']:
@@ -204,13 +222,13 @@ class Game:
         if 'goals' in self.data:
             for i, loc in enumerate(self.data['goals']):
                 if i == 0:
-                    self.goals.add( Goal(self, self.flag_img, loc) )
+                    self.items.add( Goal(self, self.flag_img, loc) )
                 else:
-                    self.goals.add( Goal(self, self.flagpole_img, loc) )
+                    self.items.add( Goal(self, self.flagpole_img, loc) )
 
         # Make one big sprite group for easy drawing and updating
         self.all_sprites = pygame.sprite.LayeredUpdates()
-        self.all_sprites.add(self.hero, self.platforms, self.items, self.enemies, self.goals, self.interactables)
+        self.all_sprites.add(self.hero, self.platforms, self.items, self.enemies, self.interactables)
     
     def start(self):
         self.stage = PLAYING
@@ -306,6 +324,12 @@ class Game:
                 self.hero.go_right()
             else:
                 self.hero.stop()
+
+        '''
+        I'd really like to get controls moved within the hero class. Would make multi-player games much less messy here.
+        Maybe make an act() function that takes filtered input?
+        Could an act() function in an enemy deal with A.I.?
+        '''
      
     def update(self):
         if self.stage == PLAYING and not self.hero.is_interacting:
@@ -316,7 +340,7 @@ class Game:
                 if (self.are_close(sprite, self.hero)):
                     sprite.update()
 
-            if self.hero.reached_goal():
+            if self.hero.reached_goal:
                 self.complete_level()
             elif not self.hero.is_alive():
                 self.lose()
@@ -347,6 +371,7 @@ class Game:
             if self.are_close(sprite, self.hero):
                 self.screen.blit(sprite.image, [sprite.rect.x - offset_x, sprite.rect.y - offset_y])
 
+        # I hate this.
         if self.infobox is not None:
             self.infobox.draw(self.screen)
         

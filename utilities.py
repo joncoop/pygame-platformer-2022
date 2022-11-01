@@ -37,6 +37,7 @@ class Audio():
         self.sounds[name].play()
 
     def mute(self):
+        # better to set all volumes to zero?
         pygame.mixer.stop()
 
     def unmute(self):
